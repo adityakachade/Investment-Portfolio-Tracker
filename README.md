@@ -23,7 +23,7 @@ This project is a full-stack web application that allows users to track and mana
 - Diversification reports
 
 ### 📦 Tech Stack
-- **Frontend**: HTML, Bootstrap 5, Vanilla JavaScript
+- **Frontend**: HTML,JavaScript
 - **Backend**: Node.js, Express.js
 - **Database**: MongoDB
 
