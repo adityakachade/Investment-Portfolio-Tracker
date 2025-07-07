@@ -5,10 +5,15 @@ const authRoutes = require('./routes/authRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
 const assetRoutes = require('./routes/assetRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
+const path = require('path');
 
 dotenv.config();
+
 const app = express();
 app.use(express.json());
+
+// ✅ Serve static frontend files (after app is defined)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/api/auth', authRoutes);

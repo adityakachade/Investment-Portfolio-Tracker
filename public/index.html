@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Investment Portfolio Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #333;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      padding: 2rem;
+    }
+    form {
+      background: white;
+      padding: 1.5rem;
+      margin: 1rem auto;
+      border-radius: 6px;
+      max-width: 400px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, select, button {
+      width: 100%;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    section {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Investment Portfolio Tracker</h1>
+  </header>
+
+  <main>
+    <form id="registerForm">
+      <h2>Register</h2>
+      <input type="email" id="registerEmail" placeholder="Email" required />
+      <input type="password" id="registerPassword" placeholder="Password" required />
+      <button type="submit">Register</button>
+    </form>
+
+    <form id="loginForm">
+      <h2>Login</h2>
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+
+    <form id="portfolioForm" style="display:none">
+      <h2>Create Portfolio</h2>
+      <input type="text" id="portfolioName" placeholder="Portfolio Name" required />
+      <button type="submit">Create Portfolio</button>
+    </form>
+
+    <form id="assetForm" style="display:none">
+      <h2>Add Asset</h2>
+      <select id="portfolioSelect"></select>
+      <input type="text" id="symbol" placeholder="Asset Symbol (e.g., BTC)" required />
+      <select id="type">
+        <option value="stock">Stock</option>
+        <option value="crypto">Crypto</option>
+        <option value="bond">Bond</option>
+      </select>
+      <input type="number" id="quantity" placeholder="Quantity" required />
+      <input type="number" id="buyPrice" placeholder="Buy Price" required />
+      <button type="submit">Add Asset</button>
+    </form>
+
+    <section id="portfolioList"><h2>Portfolios</h2></section>
+    <section id="assetList"><h2>Assets</h2></section>
+  </main>
+
+  <script>
+    let token = '';
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        alert('Registered successfully. You can now log in.');
+      } else {
+        alert(data.message || 'Registration failed.');
+      }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        document.getElementById('portfolioForm').style.display = 'block';
+        document.getElementById('assetForm').style.display = 'block';
+        loadPortfolios();
+      } else {
+        alert(data.message || 'Login failed.');
+      }
+    });
+
+    document.getElementById('portfolioForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('portfolioName').value;
+
+      await fetch('http://localhost:5000/api/portfolios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name })
+      });
+
+      loadPortfolios();
+    });
+
+    document.getElementById('assetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const portfolioId = document.getElementById('portfolioSelect').value;
+      const symbol = document.getElementById('symbol').value;
+      const type = document.getElementById('type').value;
+      const quantity = document.getElementById('quantity').value;
+      const buyPrice = document.getElementById('buyPrice').value;
+
+      await fetch('http://localhost:5000/api/assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ portfolioId, symbol, type, quantity, buyPrice })
+      });
+
+      loadAssets(portfolioId);
+    });
+
+    async function loadPortfolios() {
+      const res = await fetch('http://localhost:5000/api/portfolios', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const portfolios = await res.json();
+
+      const select = document.getElementById('portfolioSelect');
+      select.innerHTML = '';
+
+      const list = document.getElementById('portfolioList');
+      list.innerHTML = '<h2>Portfolios</h2>';
+
+      portfolios.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p._id;
+        opt.innerText = p.name;
+        select.appendChild(opt);
+
+        const item = document.createElement('div');
+        item.innerText = p.name;
+        item.style.cursor = 'pointer';
+        item.onclick = () => loadAssets(p._id);
+        list.appendChild(item);
+      });
+    }
+
+    async function loadAssets(portfolioId) {
+      const res = await fetch(`http://localhost:5000/api/assets/${portfolioId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const assets = await res.json();
+
+      const list = document.getElementById('assetList');
+      list.innerHTML = '<h2>Assets</h2>';
+      assets.forEach(a => {
+        const item = document.createElement('div');
+        item.innerText = `${a.symbol.toUpperCase()} (${a.type}) - Qty: ${a.quantity} @ $${a.buyPrice}`;
+        list.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
